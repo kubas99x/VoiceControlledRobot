@@ -14,7 +14,7 @@ class Client:
         msgReceive = msgFromServer[0].decode("utf-8").rstrip('\x00')
         return msgReceive
 
-client1 = Client("172.31.1.147", 30002, 256)  # serwer na robocie
+client1 = Client("172.31.1.147", 30002, 256)
 print(client1.sendMessage("Hello Server"))
 
 inputMessage = ""
@@ -25,7 +25,6 @@ while processedMessage != "endProgram":
     print("Data straight from user: ", inputMessage)
     if(processedMessage != ""):
         print("Sending this message to robot: ", processedMessage)
-        # Wysylanie wiadomosci do robota
         client1.sendMessage(processedMessage)
         processedMessage = ""
     else:

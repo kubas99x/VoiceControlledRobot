@@ -2,6 +2,7 @@ from vosk import Model, KaldiRecognizer
 import pyaudio
 import socket
 import threading
+from playsound import playsound
 
 
 class Client:
@@ -36,6 +37,7 @@ class Client:
             print("No confirmation from server, repeat the command if "
                   "robot didn't move")
         else:
+            # playsound(r'D:\Inżynierka_2022_VW\Programy_Python\rogerRoger.mp3')
             UDPClientSocket.settimeout(120)
             try:
                 msgFromServer = UDPClientSocket.recvfrom(self.bufferSize)
@@ -133,56 +135,33 @@ def subFromString(userMessage):
     return exitMessage
 
 
-# help(Client)
-# help(subFromString)
-# help(changePolishLetters)
+def main():
+    print("----START OF THE PROGRAM----")
+    client1 = Client("172.31.1.147", 30002, 256)
+    print(client1.sendMessage("Hello Server"))
+    print("----RECEIVED FIRST MESSAGE----")
 
-print("----START OF THE PROGRAM----")
-client1 = Client("172.31.1.147", 30002, 256)
-print(client1.sendMessage("Hello Server"))
-print("----RECEIVED FIRST MESSAGE----")
+    recognizer, stream = createTeachModel()
 
-recognizer, stream = createTeachModel()
+    inputMessage = ""
+    processedMessage = ''
+    while processedMessage != "endProgram":
+        thread = ListenThread()
+        thread.start()
+        thread.listenFromUserMethod(recognizer, stream)
+        thread.join()
+        inputMessage = thread.value
+        print("Data straight from user: ", inputMessage)
+        # process the data from user and sending to robot
+        processedMessage = subFromString(inputMessage)
+        if processedMessage != "":
+            print("Sending this mess to robot: ", processedMessage)
+            # Sending message to robot
+            client1.sendMessage(processedMessage)
+        else:
+            print("There is not command like this in our system")
+        print("-" * 20)
 
-inputMessage = ""
-processedMessage = ''
-while processedMessage != "endProgram":
-    thread = ListenThread()
-    thread.start()
-    thread.listenFromUserMethod(recognizer, stream)
-    thread.join()
-    inputMessage = thread.value
-    print("Data straight from user: ", inputMessage)
-    # process the data from user and sending to robot
-    processedMessage = subFromString(inputMessage)
-    if processedMessage != "":
-        print("Sending this mess to robot: ", processedMessage)
-        # Sending message to robot
-        client1.sendMessage(processedMessage)
-    else:
-        print("There is not command like this in our system")
-    print("-" * 20)
 
-# Notateczki
-'''
-Komendy:
-śrubokręt jeden
-klucz jeden
-Dodatkowe miejsce odkładcze 4 dla odkładanych narzędzi
-'''
-# Kod nie używany, tak jak by miał się przydac później
-'''def listenFromUser(recognizer, stream):
-    messageFromUser = ""
-    text = ""
-    while messageFromUser == "":
-        data = stream.read(4096)
-        if recognizer.AcceptWaveform(data):
-            text = recognizer.Result()
-            print(text)
-            messageFromUser = text[14:-3]
-    return text[14:-3]'''
-'''    # messageFromUser=''
-    # x = threading.Thread(target=listenFromUser, args=(recognizer,stream))
-    # x.start()
-    # x.join()
-    # print("after listening: ", messageFromUser)'''
+if __name__ == '__main__':
+    main()
