@@ -2,7 +2,8 @@ from vosk import Model, KaldiRecognizer
 import pyaudio
 import socket
 import threading
-from playsound import playsound
+import os
+# from playsound import playsound
 
 
 class Client:
@@ -20,32 +21,34 @@ class Client:
         self.bufferSize = bufferSize_
 
     def sendMessage(self, mess_):
-        """
-        :param mess_: message we want to send (String)
-        :return: message received from server
-        """
-        UDPClientSocket = socket.socket(family=socket.AF_INET,
-                                        type=socket.SOCK_DGRAM)
+        """:param mess_: message we want to send (String)
+        :return: message received from server """
+        UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
         UDPClientSocket.settimeout(10)
         bytesToSend = str.encode(mess_)
-        UDPClientSocket.sendto(bytesToSend, self.serverAddressPort)
         msgReceive = ""
         try:
-            msgFromServer = UDPClientSocket.recvfrom(self.bufferSize)
-            msgReceive = msgFromServer[0].decode("utf-8").rstrip('\x00')
-        except socket.timeout:
-            print("No confirmation from server, repeat the command if "
-                  "robot didn't move")
+            UDPClientSocket.sendto(bytesToSend, self.serverAddressPort)
+        except:
+            print("Host socket is unreachable")
         else:
-            # playsound(r'D:\Inżynierka_2022_VW\Programy_Python\rogerRoger.mp3')
-            UDPClientSocket.settimeout(120)
             try:
                 msgFromServer = UDPClientSocket.recvfrom(self.bufferSize)
                 msgReceive = msgFromServer[0].decode("utf-8").rstrip('\x00')
             except socket.timeout:
-                print("No confirmation from server that the robot finished"
-                      " the movement, check the robot. If robot is "
-                      "in start position you can continue.")
+                print("No confirmation from server, repeat the command if "
+                      "robot didn't move")
+            else:
+                # playsound(r'D:\Inżynierka_2022_VW\Programy_Python\rogerRoger.mp3')
+                UDPClientSocket.settimeout(120)
+                try:
+                    msgFromServer = UDPClientSocket.recvfrom(self.bufferSize)
+                    msgReceive = msgFromServer[0].decode("utf-8").rstrip('\x00')
+                except socket.timeout:
+                    print(
+                        "No confirmation from server that the robot finished"
+                        " the movement, check the robot. If robot is "
+                        "in start position you can continue.")
         return msgReceive
 
 
@@ -79,11 +82,12 @@ class ListenThread(threading.Thread):
 
 
 def createTeachModel():
-    """
-    creates speech model on the start of the program
-    :return: recognizer, stream
-    """
-    model = Model(model_path=r"D:\voskModels\vosk-model-small-pl-0.22")
+    """creates speech model on the start of the program
+    :return: recognizer, stream"""
+    path = os.getcwd()
+    upperPath = os.path.abspath(os.path.join(path, os.pardir))
+    model = Model(
+        model_path=os.path.join(upperPath, "vosk-model-small-pl-0.22"))
     recognizer_ = KaldiRecognizer(model, 16000)
 
     mic = pyaudio.PyAudio()
@@ -137,13 +141,13 @@ def subFromString(userMessage):
 
 def main():
     print("----START OF THE PROGRAM----")
+    print("----CREATING TEACH MODEL----")
+    recognizer, stream = createTeachModel()
+    print("----SENDING EXAMPLE MESSAGE TO ROBOT----")
     client1 = Client("172.31.1.147", 30002, 256)
     print(client1.sendMessage("Hello Server"))
     print("----RECEIVED FIRST MESSAGE----")
-
-    recognizer, stream = createTeachModel()
-
-    inputMessage = ""
+    print("----READY TO RECEIVE HUMAN COMMANDS----")
     processedMessage = ''
     while processedMessage != "endProgram":
         thread = ListenThread()
@@ -155,7 +159,7 @@ def main():
         # process the data from user and sending to robot
         processedMessage = subFromString(inputMessage)
         if processedMessage != "":
-            print("Sending this mess to robot: ", processedMessage)
+            print("Sending message to robot: ", processedMessage)
             # Sending message to robot
             client1.sendMessage(processedMessage)
         else:
